@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Comic Reader</title>
+	
+	<script>
+// This ensures functions are available when called
+function showPage(pageId) {
+    document.querySelector(`.page.active`).classList.remove('active');
+    document.getElementById(pageId).classList.add('active');
+    currentPage = pageId;
+    
+    // Update active nav link
+    document.querySelectorAll('nav a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('onclick')?.includes(`'${pageId}'`)) {
+            link.classList.add('active');
+        }
+    });
+    
+    window.scrollTo(0, 0);
+}
+
+function showRandomComic() {
+    const randomIndex = Math.floor(Math.random() * comics.length);
+    showComicDetail(comics[randomIndex].id);
+}
+</script>
+	
+    <style>
+        /* Experimental Color Scheme */
+        :root {
+            --primary-bg: #0f0f1a;
+            --secondary-bg: #1a1a2e;
+            --accent-color: #ff4d88;
+            --accent-hover: #ff66a3;
+            --text-primary: #e6e6ff;
+            --text-secondary: #b8b8d8;
+            --border-color: #3d3d5c;
+            --neon-glow: 0 0 10px var(--accent-color), 0 0 20px var(--accent-color);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Comic Neue', 'Comic Sans MS', cursive, sans-serif;
+        }
+        
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 77, 136, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(77, 136, 255, 0.1) 0%, transparent 20%);
+        }
+        
+        /* Cosmic Header */
+        header {
+            background-color: rgba(26, 26, 46, 0.9);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-family: 'Bangers', cursive;
+            letter-spacing: 2px;
+            text-shadow: var(--neon-glow);
+            animation: neonPulse 2s infinite alternate;
+        }
+        
+        @keyframes neonPulse {
+            from { text-shadow: 0 0 5px var(--accent-color), 0 0 10px var(--accent-color); }
+            to { text-shadow: 0 0 10px var(--accent-color), 0 0 20px var(--accent-color), 0 0 30px var(--accent-color); }
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+        
+        nav ul li {
+            margin-left: 1.5rem;
+            position: relative;
+        }
+        
+        nav ul li a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        
+        nav ul li a:hover, nav ul li a.active {
+            color: var(--accent-color);
+            background-color: rgba(255, 77, 136, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        nav ul li a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        nav ul li a:hover::after, nav ul li a.active::after {
+            width: 100%;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 6rem 1rem 2rem;
+        }
+        
+        /* Cosmic Buttons */
+        .btn {
+            background-color: var(--accent-color);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 77, 136, 0.3);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .btn:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 77, 136, 0.4);
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+            z-index: -1;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .page {
+            display: none;
+            animation: fadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Home Page - Cosmic Explorer */
+        .hero {
+            height: 70vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: 
+                radial-gradient(ellipse at center, rgba(15, 15, 26, 0.7) 0%, rgba(26, 26, 46, 0.9) 100%),
+                url('https://source.unsplash.com/random/1200x600/?comic,space') no-repeat center center;
+            background-size: cover;
+            margin-bottom: 3rem;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, transparent 0%, var(--primary-bg) 150%);
+            pointer-events: none;
+        }
+        
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            font-family: 'Bangers', cursive;
+            letter-spacing: 3px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            max-width: 700px;
+            margin-bottom: 2.5rem;
+            color: var(--text-secondary);
+            position: relative;
+            z-index: 1;
+            line-height: 1.8;
+        }
+        
+        .hero .btn {
+            font-size: 1.2rem;
+            padding: 1rem 2rem;
+            z-index: 1;
+        }
+        
+        .featured-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: var(--accent-color);
+            font-family: 'Bangers', cursive;
+            letter-spacing: 2px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .featured-section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-color), transparent);
+            border-radius: 2px;
+        }
+        
+        /* Comic Grid - Floating Cards */
+        .comic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 2rem;
+            perspective: 1000px;
+        }
+        
+        .comic-card {
+            background-color: var(--secondary-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform-style: preserve-3d;
+        }
+        
+        .comic-card:hover {
+            transform: translateY(-10px) rotateX(5deg) rotateY(5deg);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 77, 136, 0.3);
+        }
+        
+        .comic-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 77, 136, 0.1) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .comic-card:hover::before {
+            opacity: 1;
+        }
+        
+        .comic-cover {
+            height: 320px;
+            background-color: #333;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .comic-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .comic-card:hover .comic-cover img {
+            transform: scale(1.1);
+        }
+        
+        .comic-info {
+            padding: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .comic-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+            position: relative;
+        }
+        
+        .comic-title::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .comic-card:hover .comic-title::after {
+            width: 40px;
+        }
+        
+        .comic-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .comic-stats span:last-child {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        /* Comics List Page - Cosmic Explorer */
+        .filter-section {
+            margin-bottom: 3rem;
+            background-color: var(--secondary-bg);
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .filter-options {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-options select, .filter-options input {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.8rem 1rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            min-width: 200px;
+            transition: all 0.3s;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+        }
+        
+        .filter-options select:focus, .filter-options input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255, 77, 136, 0.3);
+        }
+        
+        .filter-options input {
+            flex-grow: 1;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M15.5 14h-.79l-.28-.27a6.5 6.5 0 001.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 00-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 005.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3e%3c/svg%3e");
+            background-position: left 1rem center;
+            padding-left: 3rem;
+        }
+        
+        .comics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 2rem;
+        }
+        
+        /* Comic Detail Page - Cosmic Showcase */
+        .comic-detail {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 3rem;
+            animation: slideIn 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .comic-detail-cover {
+            height: 500px;
+            background-color: #333;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        
+        .comic-detail-cover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent 70%, rgba(0, 0, 0, 0.7) 100%);
+            z-index: 1;
+        }
+        
+        .comic-detail-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .comic-detail-cover:hover img {
+            transform: scale(1.05);
+        }
+        
+        .comic-detail-info h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+            font-family: 'Bangers', cursive;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .comic-detail-stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        
+        .comic-detail-stats div {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .comic-detail-stats strong {
+            color: var(--text-primary);
+        }
+        
+        .comic-detail-description {
+            margin-bottom: 2.5rem;
+            line-height: 1.8;
+            font-size: 1.1rem;
+            background-color: rgba(26, 26, 46, 0.5);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        
+        .action-buttons .btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chapter-list {
+            background-color: var(--secondary-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .chapter-list h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+            font-family: 'Bangers', cursive;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chapter-list h2::before {
+            content: '📖';
+        }
+        
+        .chapter-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px;
+        }
+        
+        .chapter-item:last-child {
+            border-bottom: none;
+        }
+        
+        .chapter-item:hover {
+            background-color: rgba(255, 77, 136, 0.1);
+            transform: translateX(10px);
+        }
+        
+        .chapter-number {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chapter-number::before {
+            content: '🔹';
+        }
+        
+        .chapter-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Comic Chapter Reading View - Cosmic Theater */
+        .reading-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 80px;
+            background-color: var(--primary-bg);
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+        
+        .comic-title-nav {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .comic-title-nav::before {
+            content: '✨';
+        }
+        
+        .chapter-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .chapter-select {
+            background-color: var(--secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.8rem 1rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            min-width: 150px;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .chapter-select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255, 77, 136, 0.3);
+        }
+        
+        .comic-pages {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 6rem;
+        }
+        
+        .comic-page {
+            max-width: 800px;
+            width: 100%;
+            background-color: #333;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s;
+        }
+        
+        .comic-page:hover {
+            transform: scale(1.02);
+        }
+        
+        .comic-page img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .page-navigation {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1.5rem;
+            background-color: rgba(26, 26, 46, 0.9);
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border: 1px solid var(--border-color);
+        }
+        
+        .page-navigation .btn {
+            padding: 0.8rem 1.5rem;
+        }
+        
+        #page-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Floating Stars Background */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration) infinite ease-in-out;
+            opacity: 0;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; }
+            50% { opacity: var(--opacity); }
+        }
+        
+        /* Floating Emoji Decorations */
+        .emoji-decoration {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.2;
+            z-index: -1;
+            animation: floatEmoji var(--duration) infinite ease-in-out;
+        }
+        
+        @keyframes floatEmoji {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .comic-detail {
+                grid-template-columns: 300px 1fr;
+                gap: 2rem;
+            }
+            
+            .comic-detail-cover {
+                height: 450px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .comic-detail {
+                grid-template-columns: 1fr;
+            }
+            
+            .comic-detail-cover {
+                height: 500px;
+                max-width: 400px;
+                margin: 0 auto;
+            }
+            
+            .hero h1 {
+                font-size: 3rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .hero {
+                height: 60vh;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+                padding: 0 1rem;
+            }
+            
+            .filter-options {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+            
+            .filter-options select, .filter-options input {
+                width: 100%;
+            }
+            
+            .comic-grid, .comics-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 1.5rem;
+            }
+            
+            .reading-controls {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .chapter-nav {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .page-navigation {
+                width: 90%;
+                justify-content: space-between;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            header {
+                padding: 1rem;
+            }
+            
+            .logo {
+                font-size: 1.5rem;
+            }
+            
+            nav ul li {
+                margin-left: 1rem;
+            }
+            
+            .container {
+                padding: 5rem 1rem 2rem;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .comic-grid, .comics-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+            
+            .comic-cover {
+                height: 250px;
+            }
+            
+            .comic-detail-cover {
+                height: 400px;
+            }
+            
+            .comic-detail-info h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Floating Stars Background -->
+    <div class="stars" id="stars"></div>
+    
+    <!-- Floating Emoji Decorations -->
+    <div class="emoji-decoration" style="--duration: 8s; top: 20%; left: 5%;">🎭</div>
+    <div class="emoji-decoration" style="--duration: 10s; top: 70%; left: 90%;">📚</div>
+    <div class="emoji-decoration" style="--duration: 12s; top: 30%; left: 85%;">🦸</div>
+    <div class="emoji-decoration" style="--duration: 9s; top: 80%; left: 10%;">🎨</div>
+    
+    <!-- Header with Navigation -->
+    <header>
+        <a href="#" class="logo" onclick="showPage('home')">COMICSPACE</a>
+        <nav>
+    <ul>
+        <li><a href="#" onclick="showPage('home'); return false;" class="active">Home</a></li>
+        <li><a href="#" onclick="showPage('comics-list'); return false;">Explore</a></li>
+        <li><a href="#" onclick="showRandomComic(); return false;">Surprise Me!</a></li>
+    </ul>
+</nav>
+    </header>
+    
+    <!-- Main Content Container -->
+    <div class="container">
+        <!-- Home Page -->
+        <div id="home" class="page active">
+            <section class="hero">
+                <h1>Journey Through Cosmic Comics</h1>
+                <p>Embark on an adventure through galaxies of stories. Discover, read, and get lost in worlds beyond imagination with our curated collection of visual wonders.</p>
+                <button class="btn" onclick="showPage('comics-list'); return false;">
+					<span>Begin Exploration</span>
+					<span>🚀</span>
+				</button>
+            </section>
+            
+            <section class="featured-section">
+                <h2>Featured Adventures</h2>
+                <div class="comic-grid">
+                    <!-- Featured Comics will be loaded here -->
+                </div>
+            </section>
+        </div>
+        
+        <!-- Comics List Page -->
+        <div id="comics-list" class="page">
+            <section class="filter-section">
+                <div class="filter-options">
+                    <select id="sort-filter">
+                        <option value="newest">Newest</option>
+                        <option value="popular">Most Chapters</option>
+                        <option value="rating">Highest Rated</option>
+                    </select>
+                    <input type="text" placeholder="Search comics..." id="search-comics">
+                    <button class="btn" onclick="filterComics()">Apply Filters</button>
+                </div>
+            </section>
+            
+            <div class="comics-grid" id="all-comics">
+                <!-- All Comics will be loaded here -->
+            </div>
+        </div>
+        
+        <!-- Comic Detail Page -->
+        <div id="comic-detail" class="page">
+            <div class="comic-detail">
+                <div class="comic-detail-cover">
+                    <img src="" alt="Comic Cover" id="detail-cover">
+                </div>
+                <div class="comic-detail-info">
+                    <h1 id="detail-title">Comic Title</h1>
+                    <div class="comic-detail-stats">
+                        <div><strong>Chapters:</strong> <span id="detail-chapters">0</span></div>
+                        <div><strong>Rating:</strong> <span id="detail-rating">0.0</span> ⭐</div>
+                    </div>
+                    <div class="comic-detail-description" id="detail-description">
+                        Loading comic description...
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn" onclick="startReading()">
+                            <span>Start Reading</span>
+                            <span>📖</span>
+                        </button>
+                        <button class="btn" onclick="addToFavorites()">
+                            <span>Add to Favorites</span>
+                            <span>❤️</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chapter-list">
+                <h2>Chapters</h2>
+                <div id="chapter-list-container">
+                    <!-- Chapters will be loaded here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comic Chapter Reading View -->
+        <div id="reading-view" class="page">
+            <div class="reading-controls">
+                <div class="comic-title-nav" id="reading-title">Comic Title - Chapter 1</div>
+                <div class="chapter-nav">
+                    <button class="btn" onclick="prevChapter()">⬅️ Prev</button>
+                    <select class="chapter-select" id="chapter-select" onchange="changeChapter()">
+                        <!-- Chapters will be loaded here -->
+                    </select>
+                    <button class="btn" onclick="nextChapter()">Next ➡️</button>
+                </div>
+            </div>
+            
+            <div class="comic-pages" id="comic-pages">
+                <!-- Comic Pages will be loaded here -->
+            </div>
+            
+            <div class="page-navigation">
+                <button class="btn" onclick="prevPage()">◀ Prev Page</button>
+                <span id="page-indicator">Page 1 of 5</span>
+                <button class="btn" onclick="nextPage()">Next Page ▶</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Enhanced Sample Data
+const comics = [
+    {
+        id: 1,
+        title: "Galactic Guardians",
+        chapters: 25,
+        rating: 4.8,
+        description: "In a universe on the brink of collapse, a ragtag team of cosmic protectors must unite to save all existence from an ancient evil that consumes dimensions. Each guardian wields a unique power tied to a fundamental force of the universe.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?space,hero"
+    },
+    {
+        id: 2,
+        title: "Neon Samurai",
+        chapters: 42,
+        rating: 4.9,
+        description: "In a cyberpunk future where corporations rule, a lone samurai with a glowing blade fights to free the oppressed masses. His sword cuts through steel and lies alike in this visually stunning tale of rebellion.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?cyberpunk,samurai"
+    },
+    {
+        id: 3,
+        title: "Mystic High",
+        chapters: 31,
+        rating: 4.7,
+        description: "At a school where magic is real but forbidden, a group of students discover they're descendants of legendary sorcerers. They must master their powers while keeping them secret from the mundane world.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?magic,school"
+    },
+    {
+        id: 4,
+        title: "Robot Dreams",
+        chapters: 15,
+        rating: 4.5,
+        description: "In a world where robots have gained sentience, one machine begins to experience something impossible - dreams. This discovery leads it on a journey to understand what it means to be truly alive.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?robot,future"
+    },
+    {
+        id: 5,
+        title: "Time Surfers",
+        chapters: 28,
+        rating: 4.6,
+        description: "A group of teenagers discover they can ride waves through time. But when one of them alters a major historical event, they must race through the ages to fix the timeline before reality unravels.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?time,travel"
+    },
+    {
+        id: 6,
+        title: "Monster Chef",
+        chapters: 32,
+        rating: 4.4,
+        description: "In a world where monsters are real, one chef specializes in cooking for them. From vampire steaks to werewolf waffles, follow his culinary adventures in this deliciously funny series.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?monster,food"
+    },
+    {
+        id: 7,
+        title: "Parallel Lives",
+        chapters: 40,
+        rating: 4.3,
+        description: "A woman discovers she can see into parallel universes where different versions of herself made different life choices. But when one of her alternates turns out to be a murderer, she must uncover which path led to darkness.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?parallel,universe"
+    },
+    {
+        id: 8,
+        title: "Shadow Detective",
+        chapters: 36,
+        rating: 4.7,
+        description: "In a noir-inspired world where shadows have minds of their own, a detective solves crimes by interrogating the shadows of victims and suspects. But when his own shadow starts acting independently, he faces his most personal case yet.",
+        coverUrl: "https://source.unsplash.com/random/300x400/?noir,detective"
+    }
+];
+
+// Current state variables
+let currentPage = 'home';
+let currentComic = null;
+let currentChapter = 1;
+let currentPageNum = 1;
+let totalPages = 5; // Default, will be updated when loading chapters
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', function() {
+    createStars();
+    loadFeaturedComics();
+    loadAllComics();
+    
+    // Set up navigation for all page links
+    document.querySelectorAll('nav a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelector('nav a.active').classList.remove('active');
+            this.classList.add('active');
+        });
+    });
+});
+
+// Create floating stars background
+function createStars() {
+    const starsContainer = document.getElementById('stars');
+    const starCount = 100;
+    
+    for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        
+        // Random properties
+        const size = Math.random() * 3;
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+        const duration = 5 + Math.random() * 10;
+        const opacity = 0.1 + Math.random() * 0.9;
+        const delay = Math.random() * 5;
+        
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${x}%`;
+        star.style.top = `${y}%`;
+        star.style.setProperty('--duration', `${duration}s`);
+        star.style.setProperty('--opacity', opacity);
+        star.style.animationDelay = `${delay}s`;
+        
+        starsContainer.appendChild(star);
+    }
+}
+
+// Load featured comics on home page
+function loadFeaturedComics() {
+    const featuredGrid = document.querySelector('.comic-grid');
+    featuredGrid.innerHTML = '';
+    
+    // Get 4 random featured comics
+    const featuredComics = [...comics].sort(() => 0.5 - Math.random()).slice(0, 4);
+    
+    featuredComics.forEach(comic => {
+        const comicCard = document.createElement('div');
+        comicCard.className = 'comic-card';
+        comicCard.innerHTML = `
+            <div class="comic-cover">
+                <img src="${comic.coverUrl}" alt="${comic.title}" onerror="this.src='https://via.placeholder.com/300x400?text=Cover+Not+Found'">
+            </div>
+            <div class="comic-info">
+                <h3 class="comic-title">${comic.title}</h3>
+                <div class="comic-stats">
+                    <span>${comic.chapters} ch</span>
+                    <span>${comic.rating} ★</span>
+                </div>
+            </div>
+        `;
+        comicCard.addEventListener('click', () => showComicDetail(comic.id));
+        featuredGrid.appendChild(comicCard);
+    });
+}
+
+// Load all comics for the explore page
+function loadAllComics() {
+    const allComicsGrid = document.getElementById('all-comics');
+    allComicsGrid.innerHTML = '';
+    
+    comics.forEach(comic => {
+        const comicCard = document.createElement('div');
+        comicCard.className = 'comic-card';
+        comicCard.innerHTML = `
+            <div class="comic-cover">
+                <img src="${comic.coverUrl}" alt="${comic.title}" onerror="this.src='https://via.placeholder.com/300x400?text=Cover+Not+Found'">
+            </div>
+            <div class="comic-info">
+                <h3 class="comic-title">${comic.title}</h3>
+                <div class="comic-stats">
+                    <span>${comic.chapters} ch</span>
+                    <span>${comic.rating} ★</span>
+                </div>
+            </div>
+        `;
+        comicCard.addEventListener('click', () => showComicDetail(comic.id));
+        allComicsGrid.appendChild(comicCard);
+    });
+}
+
+// Filter comics based on search and sort
+function filterComics() {
+    const searchTerm = document.getElementById('search-comics').value.toLowerCase();
+    const sortBy = document.getElementById('sort-filter').value;
+    
+    let filteredComics = [...comics];
+    
+    if (searchTerm) {
+        filteredComics = filteredComics.filter(comic => 
+            comic.title.toLowerCase().includes(searchTerm) || 
+            comic.description.toLowerCase().includes(searchTerm)
+        );  // Fixed missing parenthesis
+    }
+    
+    // Apply sort
+    switch(sortBy) {
+        case 'newest':
+            filteredComics.sort((a, b) => b.id - a.id); // Using ID as proxy for newness
+            break;
+        case 'popular':
+            filteredComics.sort((a, b) => b.chapters - a.chapters);
+            break;
+        case 'rating':
+            filteredComics.sort((a, b) => b.rating - a.rating);
+            break;
+    }
+    
+    // Update display
+    const allComicsGrid = document.getElementById('all-comics');
+    allComicsGrid.innerHTML = '';
+    
+    filteredComics.forEach(comic => {
+        const comicCard = document.createElement('div');
+        comicCard.className = 'comic-card';
+        comicCard.innerHTML = `
+            <div class="comic-cover">
+                <img src="${comic.coverUrl}" alt="${comic.title}" onerror="this.src='https://via.placeholder.com/300x400?text=Cover+Not+Found'">
+            </div>
+            <div class="comic-info">
+                <h3 class="comic-title">${comic.title}</h3>
+                <div class="comic-stats">
+                    <span>${comic.chapters} ch</span>
+                    <span>${comic.rating} ★</span>
+                </div>
+            </div>
+        `;
+        comicCard.addEventListener('click', () => showComicDetail(comic.id));
+        allComicsGrid.appendChild(comicCard);
+    });
+}
+
+// Show a specific page
+function showPage(pageId) {
+    document.querySelector(`.page.active`).classList.remove('active');
+    document.getElementById(pageId).classList.add('active');
+    currentPage = pageId;
+    
+    // Update active nav link
+    document.querySelectorAll('nav a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('onclick')?.includes(pageId)) {
+            link.classList.add('active');
+        }
+    });
+    
+    // Scroll to top when changing pages
+    window.scrollTo(0, 0);
+}
+
+// Show random comic
+function showRandomComic() {
+    const randomIndex = Math.floor(Math.random() * comics.length);
+    showComicDetail(comics[randomIndex].id);
+}
+
+// Show comic detail view
+function showComicDetail(comicId) {
+    const comic = comics.find(c => c.id === comicId);
+    if (!comic) return;
+    
+    currentComic = comic;
+    
+    // Update comic details
+    document.getElementById('detail-cover').src = comic.coverUrl;
+    document.getElementById('detail-title').textContent = comic.title;
+    document.getElementById('detail-chapters').textContent = comic.chapters;
+    document.getElementById('detail-rating').textContent = comic.rating;
+    document.getElementById('detail-description').textContent = comic.description;
+    
+    // Load chapters
+    loadChapters(comic);
+    
+    // Show detail page
+    showPage('comic-detail');
+}
+
+// Load chapters for a comic
+function loadChapters(comic) {
+    const chapterList = document.getElementById('chapter-list-container');
+    chapterList.innerHTML = '';
+    
+    // Generate random chapters (in a real app, this would come from an API)
+    for (let i = comic.chapters; i >= 1; i--) {
+        const chapterItem = document.createElement('div');
+        chapterItem.className = 'chapter-item';
+        
+        // Random date within the last year
+        const randomDate = new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000));
+        const formattedDate = randomDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        
+        chapterItem.innerHTML = `
+            <div class="chapter-number">Chapter ${i}</div>
+            <div class="chapter-date">${formattedDate}</div>
+        `;
+        
+        chapterItem.addEventListener('click', () => {
+            currentChapter = i;
+            startReading();
+        });
+        
+        chapterList.appendChild(chapterItem);
+    }
+}
+
+// Start reading the current comic/chapter
+function startReading() {
+    if (!currentComic) return;
+    
+    // Update reading title
+    document.getElementById('reading-title').textContent = `${currentComic.title} - Chapter ${currentChapter}`;
+    
+    // Load chapter selector
+    const chapterSelect = document.getElementById('chapter-select');
+    chapterSelect.innerHTML = '';
+    
+    for (let i = 1; i <= currentComic.chapters; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Chapter ${i}`;
+        option.selected = i === currentChapter;
+        chapterSelect.appendChild(option);
+    }
+    
+    // Load pages
+    loadPages();
+    
+    // Show reading view
+    showPage('reading-view');
+}
+
+// Load pages for current chapter
+function loadPages() {
+    const comicPages = document.getElementById('comic-pages');
+    comicPages.innerHTML = '';
+    
+    // Determine how many pages this chapter has (random between 15-25 for demo)
+    totalPages = 15 + Math.floor(Math.random() * 10);
+    
+    // Generate page images (in a real app, these would come from an API)
+    for (let i = 1; i <= totalPages; i++) {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'comic-page';
+        
+        // Use random images from Unsplash with comic theme
+        const pageImg = document.createElement('img');
+        pageImg.src = `https://source.unsplash.com/random/800x1200/?comic,page${i}`;
+        pageImg.alt = `Page ${i}`;
+        pageImg.onerror = function() {
+            this.src = 'https://via.placeholder.com/800x1200?text=Page+Not+Found';
+        };
+        
+        pageDiv.appendChild(pageImg);
+        comicPages.appendChild(pageDiv);
+    }
+    
+    // Update page indicator
+    currentPageNum = 1;
+    updatePageIndicator();
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
+// Update page indicator text
+function updatePageIndicator() {
+    document.getElementById('page-indicator').textContent = `Page ${currentPageNum} of ${totalPages}`;
+}
+
+// Navigate to next page
+function nextPage() {
+    if (currentPageNum < totalPages) {
+        currentPageNum++;
+        updatePageIndicator();
+        window.scrollTo(0, (currentPageNum - 1) * window.innerHeight);
+    }
+}
+
+// Navigate to previous page
+function prevPage() {
+    if (currentPageNum > 1) {
+        currentPageNum--;
+        updatePageIndicator();
+        window.scrollTo(0, (currentPageNum - 1) * window.innerHeight);
+    }
+}
+
+// Change to selected chapter
+function changeChapter() {
+    const chapterSelect = document.getElementById('chapter-select');
+    currentChapter = parseInt(chapterSelect.value);
+    startReading();
+}
+
+// Go to next chapter
+function nextChapter() {
+    if (currentChapter < currentComic.chapters) {
+        currentChapter++;
+        startReading();
+    }
+}
+
+// Go to previous chapter
+function prevChapter() {
+    if (currentChapter > 1) {
+        currentChapter--;
+        startReading();
+    }
+}
+
+// Add current comic to favorites
+function addToFavorites() {
+    if (!currentComic) return;
+    
+    // In a real app, this would save to localStorage or an API
+    alert(`Added "${currentComic.title}" to your favorites!`);
+}
+
+// Keyboard navigation for reading
+document.addEventListener('keydown', function(e) {
+    if (currentPage === 'reading-view') {
+        if (e.key === 'ArrowRight') nextPage();
+        if (e.key === 'ArrowLeft') prevPage();
+    }
+});
+</script>
+
+</body> 
+
+</html>
