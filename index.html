@@ -977,6 +977,14 @@ const comics = [
         rating: 5,
         description: "A girl who dreams to be popular, in store to find out that nothing comes without a sacrifice.",
         coverUrl: "https://i.postimg.cc/QxQsgfB6/image.png"
+	chapterPages: {
+            1: [
+                "https://i.postimg.cc/65hGBqgY/image.png",
+                "https://example.com/true-colors-page2.jpg",
+                "https://example.com/true-colors-page3.jpg"
+                // Add all page URLs for chapter 1
+            ]
+        }
     },
     {
         id: 2,
@@ -985,6 +993,14 @@ const comics = [
         rating: 5,
         description: "Do Good, Get Good.",
         coverUrl: "https://i.postimg.cc/tCZnXQMs/image.png"
+	chapterPages: {
+            1: [
+                "https://example.com/true-colors-page1.jpg",
+                "https://example.com/true-colors-page2.jpg",
+                "https://example.com/true-colors-page3.jpg"
+                // Add all page URLs for chapter 1
+            ]
+        }
     },
     {
         id: 3,
@@ -993,6 +1009,14 @@ const comics = [
         rating: 5,
         description: "Your own hurt you the most, at often times.",
         coverUrl: "https://i.postimg.cc/65hGBqgY/image.png"
+	chapterPages: {
+            1: [
+                "https://example.com/true-colors-page1.jpg",
+                "https://example.com/true-colors-page2.jpg",
+                "https://example.com/true-colors-page3.jpg"
+                // Add all page URLs for chapter 1
+            ]
+        }
     }
 ];
 
@@ -1256,25 +1280,25 @@ function loadPages() {
     const comicPages = document.getElementById('comic-pages');
     comicPages.innerHTML = '';
     
-    // Determine how many pages this chapter has (random between 15-25 for demo)
-    totalPages = 15 + Math.floor(Math.random() * 10);
+    // Get the pages for the current chapter
+    const pages = currentComic.chapterPages[currentChapter];
+    totalPages = pages.length;
     
-    // Generate page images (in a real app, these would come from an API)
-    for (let i = 1; i <= totalPages; i++) {
+    // Create page elements for each page in the chapter
+    pages.forEach((pageUrl, index) => {
         const pageDiv = document.createElement('div');
         pageDiv.className = 'comic-page';
         
-        // Use random images from Unsplash with comic theme
         const pageImg = document.createElement('img');
-        pageImg.src = `https://source.unsplash.com/random/800x1200/?comic,page${i}`;
-        pageImg.alt = `Page ${i}`;
+        pageImg.src = pageUrl;
+        pageImg.alt = `Page ${index + 1}`;
         pageImg.onerror = function() {
             this.src = 'https://via.placeholder.com/800x1200?text=Page+Not+Found';
         };
         
         pageDiv.appendChild(pageImg);
         comicPages.appendChild(pageDiv);
-    }
+    });
     
     // Update page indicator
     currentPageNum = 1;
